@@ -1,37 +1,44 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class Ball : MonoBehaviour
 {
+    [Header("Ball Settings")]
     public int score = 1;
     public float lifeTime = 10f;
 
+    private GameObject rootObject;
+
     private void Start()
     {
-        Destroy(transform.parent.gameObject, lifeTime);
+        rootObject = transform.parent != null ? transform.parent.gameObject : gameObject;
+        Destroy(rootObject, lifeTime);
     }
 
-    void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
         {
-            if (gameObject.CompareTag("Bomb"))
-            {
-                GameManager.Instance.RemoveScore(score);
-            }
-            else
-            {
-                GameManager.Instance.AddScore(score);
-            }
-
-            GameObject root = transform.parent != null ? transform.parent.gameObject : gameObject;
-            Destroy(root);
+            HandlePlayerCollision();
         }
         else if (other.CompareTag("Ground"))
         {
-            GameObject root = transform.parent != null ? transform.parent.gameObject : gameObject;
-            Destroy(root);
+            DestroySelf();
         }
+    }
+
+    private void HandlePlayerCollision()
+    {
+        if (CompareTag("Bomb"))
+            GameManager.Instance.RemoveScore(score);
+        else
+            GameManager.Instance.AddScore(score);
+
+        DestroySelf();
+    }
+
+    private void DestroySelf()
+    {
+        if (rootObject != null)
+            Destroy(rootObject);
     }
 }
