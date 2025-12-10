@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class SpawnManager : MonoBehaviour
@@ -7,12 +6,12 @@ public class SpawnManager : MonoBehaviour
     public SpawnPoint[] spawnPoints;
 
     [Header("Spawn Timing")]
-    public Vector2 spawnIntervalRange = new Vector2(3f, 6f); 
-    public float difficultyStep = 0.5f;     
-    public float difficultyInterval = 10f;   
-    public float minSpawnTime = 1f;       
+    public Vector2 spawnIntervalRange = new Vector2(3f, 6f);
+    public float difficultyStep = 0.5f;
+    public float difficultyInterval = 10f;
+    public float minSpawnTime = 1f;
 
-    void Start()
+    private void Start()
     {
         foreach (var sp in spawnPoints)
         {
@@ -22,50 +21,49 @@ public class SpawnManager : MonoBehaviour
         StartCoroutine(DifficultyScaler());
     }
 
-    IEnumerator SpawnRoutine(SpawnPoint sp)
+    private IEnumerator SpawnRoutine(SpawnPoint sp)
     {
         while (true)
         {
-            float delay = Random.Range(spawnIntervalRange.x, spawnIntervalRange.y);
-            yield return new WaitForSeconds(delay);
+            yield return new WaitForSeconds(Random.Range(spawnIntervalRange.x, spawnIntervalRange.y));
 
             if (sp.spawnData == null || sp.spawnData.dropItems.Length == 0)
                 continue;
 
-            
-            float totalWeight = 0f;
-            foreach (var d in sp.spawnData.dropItems)
+            var item = GetRandomItem(sp);
+            if (item == null || item.prefab == null)
             {
-                totalWeight += Mathf.Max(0f, d.dropChance);
+                Debug.LogWarning($"SpawnData '{sp.spawnData.name}' มี item ที่ไม่มี prefab");
+                continue;
             }
-            if (totalWeight <= 0f) continue;
 
-            
-            float pick = Random.Range(0f, totalWeight);
-
-            
-            float cumulative = 0f;
-            foreach (var item in sp.spawnData.dropItems)
-            {
-                cumulative += Mathf.Max(0f, item.dropChance);
-                if (pick <= cumulative)
-                {
-                    if (item.prefab != null)
-                    {
-                        Instantiate(item.prefab, sp.transform.position, Quaternion.identity);
-                        
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"Spawn data {sp.spawnData.name} มี ItemDrop ที่ prefab หายไป");
-                    }
-                    break;
-                }
-            }
+            Instantiate(item.prefab, sp.transform.position, Quaternion.identity);
         }
     }
 
-    IEnumerator DifficultyScaler()
+    private ItemDrop GetRandomItem(SpawnPoint sp)
+    {
+        float totalWeight = 0f;
+        foreach (var d in sp.spawnData.dropItems)
+            totalWeight += Mathf.Max(0, d.dropChance);
+
+        if (totalWeight <= 0)
+            return null;
+
+        float pick = Random.Range(0, totalWeight);
+        float cumulative = 0f;
+
+        foreach (var item in sp.spawnData.dropItems)
+        {
+            cumulative += Mathf.Max(0, item.dropChance);
+            if (pick <= cumulative)
+                return item;
+        }
+
+        return null;
+    }
+
+    private IEnumerator DifficultyScaler()
     {
         while (true)
         {
@@ -74,7 +72,7 @@ public class SpawnManager : MonoBehaviour
             spawnIntervalRange.x = Mathf.Max(minSpawnTime, spawnIntervalRange.x - difficultyStep);
             spawnIntervalRange.y = Mathf.Max(minSpawnTime, spawnIntervalRange.y - difficultyStep);
 
-            Debug.Log("Spawn speed increased! Interval now: " + spawnIntervalRange);
+            Debug.Log($"Spawn speed increased → {spawnIntervalRange}");
         }
     }
 }
